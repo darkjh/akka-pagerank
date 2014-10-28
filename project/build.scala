@@ -11,7 +11,9 @@ object AkkaPageRankBuild extends Build {
     // dependencies
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "2.2.1" % "test",
-      "com.typesafe.akka" %% "akka-actor" % "2.3.6"
+      "com.typesafe.akka" %% "akka-actor" % "2.3.6",
+      "org.scalanlp" %% "breeze" % "0.10",
+      "org.scalanlp" %% "breeze-natives" % "0.10"
     )
   )
 
