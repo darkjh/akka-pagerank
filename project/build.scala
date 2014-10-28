@@ -10,8 +10,9 @@ object AkkaPageRankBuild extends Build {
     scalaVersion := "2.10.4",
     // dependencies
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "1.9.2" % "test",
-      "com.typesafe.akka" %% "akka-actor" % "2.3.6")
+      "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+      "com.typesafe.akka" %% "akka-actor" % "2.3.6"
+    )
   )
 
   lazy val project = Project("akka-pagerank", file("."),
