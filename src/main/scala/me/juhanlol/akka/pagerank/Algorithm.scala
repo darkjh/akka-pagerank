@@ -61,7 +61,10 @@ class NaivePageRankAlgorithm(params: PageRankParams)
       }
 
       dst :*= dampeningFactor
-      dst :+= (1 - dampeningFactor) / nodeCount
+//      // if without dead-ends
+//      dst :+= (1 - dampeningFactor) / nodeCount
+      // with dead-ends
+      dst :+= (1 - sum(dst)) / nodeCount
 
       residual = norm(src - dst)
       log.info(residual.toString)
