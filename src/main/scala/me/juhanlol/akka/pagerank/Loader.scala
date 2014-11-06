@@ -2,7 +2,7 @@ package me.juhanlol.akka.pagerank
 
 import java.io.{IOException, File}
 import scala.io.Source
-import it.unimi.dsi.fastutil.ints.{Int2ObjectLinkedOpenHashMap}
+import it.unimi.dsi.fastutil.ints.{IntLinkedOpenHashSet, Int2ObjectLinkedOpenHashMap}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import com.google.common.collect.HashBiMap
@@ -48,9 +48,12 @@ object GraphLoader {
 }
 
 
-object IntEdgeListFileLoader extends GraphLoader[Int] {
+trait IntGraphLoader extends GraphLoader[Int] {
   override def readId(str: String) = str.toInt
+}
 
+// Edge list loader with node id resolution
+object IntEdgeListFileMappingLoader extends IntGraphLoader {
   def loadFromDir(directory: String, prefix: String = ""): Graph = {
     var iter = readFile(directory, prefix).map(cast)
     val edgesBySource = new Int2ObjectLinkedOpenHashMap[ArrayBuffer[Int]]()
@@ -70,7 +73,7 @@ object IntEdgeListFileLoader extends GraphLoader[Int] {
       mapping.put(internalId, i)
       internalId += 1
     }
-    val nodeIdMapping = NodeIdMapping(mapping)
+    val nodeIdMapping = BiMapNodeIdMapping(mapping)
 
     // second pass
     // construct adjacency lists while translating the node ids
@@ -98,6 +101,6 @@ object IntEdgeListFileLoader extends GraphLoader[Int] {
       }
     }
 
-    Graph(sources, maxId, nodeCount, Some(nodeIdMapping))
+    Graph(sources, maxId, nodeCount, nodeIdMapping)
   }
 }

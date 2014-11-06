@@ -8,10 +8,16 @@ case class AdjacencyList(source: Int, outDegree: Int, dests: Array[Int])
 case class Graph(
   sources: Array[AdjacencyList],
   maxId: Int, nodeCount: Int,
-  mapping: Option[NodeIdMapping] = None
+  mapping: NodeIdMapping
 )
 
-case class NodeIdMapping(conversionTable: BiMap[Int, Int]) {
+trait NodeIdMapping {
+  def getInternalId(externalId: Int): Int
+  def getExternalId(internalId: Int): Int
+}
+
+case class BiMapNodeIdMapping(conversionTable: BiMap[Int, Int])
+  extends NodeIdMapping {
   val intToExt = conversionTable
   val extToInt = conversionTable.inverse()
 

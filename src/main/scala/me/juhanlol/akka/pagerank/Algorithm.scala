@@ -75,6 +75,6 @@ class NaivePageRankAlgorithm(params: PageRankParams)
     log.info("Used: %d ms, after %d iterations\n",
       timer().inMilliseconds, iterCount)
 
-    new PageRank(src, 1.0, graph.mapping.get)
+    new PageRank(src, 1.0, graph.mapping)
    }
 }

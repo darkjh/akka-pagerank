@@ -29,10 +29,9 @@ object CassovaryTest extends App {
 }
 
 
-object NaivePageRank extends App {
-  private val log = Logger.get(getClass)
+object NaivePageRankWithResolution extends App {
   val timer = Stopwatch.start()
-  val graph = IntEdgeListFileLoader.loadFromDir(
+  val graph = IntEdgeListFileMappingLoader.loadFromDir(
     "/home/darkjh/projects/scala/akka-pagerank/data",
     "web-Stanford.txt"
 //    "small.txt"
