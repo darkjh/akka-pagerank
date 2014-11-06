@@ -4,7 +4,7 @@ import com.twitter.cassovary.util.io.ListOfEdgesGraphReader
 import com.twitter.cassovary.algorithms.{PageRankParams => CPageRankParams, PageRank => CPageRank}
 import java.util.concurrent.Executors
 import com.twitter.util.Stopwatch
-import com.twitter.logging.Logger
+import me.juhanlol.akka.pagerank.algorithm.{PageRankParams, NaivePageRankAlgorithm}
 
 // TOO SLOW !
 // ListOfEdgeGraphReader is very slow
