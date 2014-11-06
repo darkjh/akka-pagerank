@@ -9,7 +9,7 @@ import com.google.common.collect.HashBiMap
 import scala.collection.JavaConversions._
 
 
-trait GraphLoder[T] {
+trait GraphLoader[T] {
   def readFile(directory: String, prefix: String = ""): Iterator[String] = {
     val dir = new File(directory)
     val filesInDir = dir.list()
@@ -48,7 +48,7 @@ object GraphLoader {
 }
 
 
-object IntEdgeListFileLoader extends GraphLoder[Int] {
+object IntEdgeListFileLoader extends GraphLoader[Int] {
   override def readId(str: String) = str.toInt
 
   def loadFromDir(directory: String, prefix: String = ""): Graph = {
