@@ -4,7 +4,7 @@ import com.twitter.cassovary.util.io.ListOfEdgesGraphReader
 import com.twitter.cassovary.algorithms.{PageRankParams => CPageRankParams, PageRank => CPageRank}
 import java.util.concurrent.Executors
 import com.twitter.util.Stopwatch
-import me.juhanlol.akka.pagerank.algorithm.{PageRankParams, NaivePageRankAlgorithm}
+import me.juhanlol.akka.pagerank.algorithm.{ActorPageRankAlgorithm, PageRankParams, NaivePageRankAlgorithm}
 
 // TOO SLOW !
 // ListOfEdgeGraphReader is very slow
@@ -38,6 +38,20 @@ object NaivePageRankWithResolution extends App {
   )
 
   val algo = new NaivePageRankAlgorithm(PageRankParams())
+  val pr = algo.execute(graph)
+  pr.take(10).foreach(println(_))
+}
+
+
+object ActorPageRankWithResolution extends App {
+  val timer = Stopwatch.start()
+  val graph = IntEdgeListFileMappingLoader.loadFromDir(
+    "/home/darkjh/projects/scala/akka-pagerank/data",
+    "web-Stanford.txt"
+//    "small.txt"
+  )
+
+  val algo = new ActorPageRankAlgorithm(PageRankParams())
   val pr = algo.execute(graph)
   pr.take(10).foreach(println(_))
 }
