@@ -4,12 +4,19 @@ import me.juhanlol.akka.pagerank.Graph
 import akka.actor._
 import breeze.linalg._
 import akka.routing.RoundRobinRouter
+import akka.pattern.ask
 import scala.collection.mutable.ArrayBuffer
+import com.twitter.logging.Logger
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import akka.util.Timeout
 
 
 sealed trait PRMessage
 
 case object Compute extends PRMessage
+
+case object Iteration extends PRMessage
 
 case class Work(start: Int, size: Int,
                 graph: Graph, src: DenseVector[Double])
@@ -17,20 +24,17 @@ case class Work(start: Int, size: Int,
 
 case class PartialResult(start: Int, r: Array[Double]) extends PRMessage
 
-case class PageRankResult(pr: DenseVector[Double]) extends PRMessage
-
-case object GetResult extends PRMessage
-
 
 class Worker extends Actor {
   def partialUpdate(start: Int, size: Int, g: Graph,
                     src: DenseVector[Double]): Array[Double] = {
-    val res = Array[Double](size)
+    val res = new Array[Double](size)
+
     for (s <- g.sources if s != null) {
       val weight = src(s.source) / s.outDegree
       for (j <- s.dests) {
         if (j >= start && j < start + size) {
-          val idx = j % start
+          val idx = j % size
           res(idx) = res(idx) + weight
         }
       }
@@ -45,33 +49,53 @@ class Worker extends Actor {
   }
 }
 
-class Master(g: Graph, partitions: Int,
-             params: PageRankParams, Listener: ActorRef)
+class Master(g: Graph, nbPartitions: Int, params: PageRankParams)
   extends Actor {
+  private val logger = Logger.get(getClass)
   val workerRouter = context.actorOf(
-      Props[Worker].withRouter(RoundRobinRouter(partitions)),
+      Props[Worker].withRouter(RoundRobinRouter(nbPartitions)),
     name = "workerRouter")
 
-  val size = g.nodeCount / partitions
-  var starts = 0 until g.nodeCount by size
+  val partitions = partition(g.nodeCount, nbPartitions)
 
   var src = DenseVector.fill(g.nodeCount, 1.0 / g.nodeCount)
   val partialResults = ArrayBuffer[(Int, Array[Double])]()
 
+  var replyTo: ActorRef = _
+
+  def partition(max: Int, nbPartitions: Int) = {
+    val size = max / nbPartitions
+    val partitions = (0 until max by size).zipWithIndex.map {
+      p => (p._2, p._1)
+    }
+
+    if (partitions.size > nbPartitions) {
+      partitions.dropRight(1).map {
+        case (i, s) if i == (nbPartitions-1) =>
+          (s, max - s)
+        case (i, s) => (s, size)
+      }
+    } else {
+      partitions.map {
+        case (i, s) => (s, size)
+      }
+    }
+  }
+
   override def receive: Actor.Receive = {
     case Compute =>
-      for (start <- starts) {
-        val s = if (g.nodeCount - start < size) {
-          // last one
-          g.nodeCount - start
-        } else {
-          size
-        }
-        workerRouter ! Work(start, s, g, src)
+      logger.info("Received compute command ...")
+      replyTo = sender()
+      self ! Iteration
+
+    case Iteration =>
+      logger.info("Start a new iteration ...")
+      for ((start, size) <- partitions) {
+        workerRouter ! Work(start, size, g, src)
       }
     case PartialResult(start, res) =>
       partialResults.append((start, res))
-      if (partialResults.length == partitions) {
+      if (partialResults.length == nbPartitions) {
         // all received
         val res = partialResults.sortBy(_._1).map(_._2).reduceLeft(_ ++ _)
         val dst = DenseVector(res)
@@ -82,33 +106,31 @@ class Master(g: Graph, partitions: Int,
         val residual = norm(src - dst)
         src = dst
 
+        partialResults.clear()
         if (residual > params.gamma) {
-          self ! Compute
+          self ! Iteration
         } else {
           // all done
-          context.stop(self)
+          // send final result
+          replyTo ! src
+          // stop itself
+          context.system.shutdown()
         }
       }
   }
 }
 
-class ResultListener extends Actor {
-  def receive = {
-    case PageRankResult(pr) =>
-      pr.slice(0, 10).foreach(println(_))
-      context.system.shutdown()
-  }
-}
-
-class ActorPageRankAlgorithm(params: PageRankParams)(implicit system: ActorSystem)
+class ActorPageRankAlgorithm(params: PageRankParams)
+                            (implicit system: ActorSystem,
+                             timeout: Timeout)
   extends PageRankAlgorithm {
   override def execute(graph: Graph): PageRank = {
-    val listener = system.actorOf(Props[ResultListener], name = "listener")
     val master = system.actorOf(Props[Master](new Master(
-      graph, 3, params, listener)), name = "Master")
+      graph, 8, params)), name = "Master")
 
-    master ! Compute
+    val pr = (master ? Compute).mapTo[DenseVector[Double]]
+    val result = Await.result(pr, Duration.Inf)
 
-    listener
+    new PageRank(result, 1.0, graph.mapping)
   }
 }

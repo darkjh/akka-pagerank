@@ -5,6 +5,9 @@ import com.twitter.cassovary.algorithms.{PageRankParams => CPageRankParams, Page
 import java.util.concurrent.Executors
 import com.twitter.util.Stopwatch
 import me.juhanlol.akka.pagerank.algorithm.{ActorPageRankAlgorithm, PageRankParams, NaivePageRankAlgorithm}
+import akka.actor.ActorSystem
+import akka.util.Timeout
+import scala.concurrent.duration._
 
 // TOO SLOW !
 // ListOfEdgeGraphReader is very slow
@@ -40,6 +43,8 @@ object NaivePageRankWithResolution extends App {
   val algo = new NaivePageRankAlgorithm(PageRankParams())
   val pr = algo.execute(graph)
   pr.take(10).foreach(println(_))
+
+  println("Used %d ms".format(timer().inMilliseconds))
 }
 
 
@@ -50,8 +55,12 @@ object ActorPageRankWithResolution extends App {
     "web-Stanford.txt"
 //    "small.txt"
   )
+  implicit val system = ActorSystem("PageRankSystem")
+  implicit val timeout = Timeout(100.days)
 
   val algo = new ActorPageRankAlgorithm(PageRankParams())
   val pr = algo.execute(graph)
   pr.take(10).foreach(println(_))
+
+  println("Used %d ms".format(timer().inMilliseconds))
 }
